@@ -93,6 +93,11 @@ def predict():
     f = BytesIO(data)
     im = tiff.imread(f)
     
+    ## Normalise according to metadata
+    im_mean = classifier_metadata["model"]["means"]
+    im_std = classifier_metadata["model"]["stds"]
+    im = (im - im_mean) / im_std
+    
     ## If RGB, shape received was [width, height, channel]
     ## We want [channel, width, height]
     if im.shape[2] == 3:
@@ -101,14 +106,8 @@ def predict():
     ## Works for only one channel for now
     if len(classifier_metadata["metadata"]["inputChannels"]) > 0:
         im = im[np.newaxis, classifier_metadata["metadata"]["inputChannels"][0], :, :]
-        
     
-    ## Normalise between 0-1
-    #im = np.interp(im, (im.min(), im.max()), (0, 1))
-    
-    ## CHECK IF IT'S NOT RGB
-    im = im/255.0
-    #im = np.stack((im,)*3, axis=-1)
+
     
     try:
         torch.cuda.empty_cache()
@@ -130,7 +129,6 @@ def predict():
     output = output.cpu().data.numpy()
     del input_tensor
     torch.cuda.empty_cache()
-    
     
     """
     ####################################################################
@@ -174,8 +172,8 @@ def predict():
         else:
             output = ((output - output.min()) * (1/(output.max() - output.min()) * 255)).astype("uint8")
         
-        for channel in range(output.shape[0]):
-            np.save("M:/deep_learning/out" + str(channel) + ".npy", output[channel, :, :])
+        #for channel in range(output.shape[0]):
+            #np.save("M:/deep_learning/out" + str(channel) + ".npy", output[channel, :, :])
         byte_stream = BytesIO()
         imsave(byte_stream, output)
         byte_stream.seek(0)
