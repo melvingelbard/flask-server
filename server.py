@@ -129,11 +129,12 @@ def segment():
     torch.cuda.empty_cache()
 
     if output.shape[1] == 1:
+        print("1 dimension output")
         byte_stream = BytesIO()
         imsave(byte_stream, output)
         byte_stream.seek(0)
 
-        print("1 dimension output")
+        del output
         return send_file(byte_stream, mimetype='image/tiff')
     else:
         output = np.argmax(output, axis=1)  # Now shape = [channel, height, width]
@@ -142,6 +143,8 @@ def segment():
         byte_stream = BytesIO()
         pil_image.save(byte_stream, 'TIFF', quality=100)
         byte_stream.seek(0)
+        
+        del output
         return send_file(byte_stream, mimetype='image/tiff')
 
 
@@ -222,6 +225,8 @@ def detect():
     data = {'boxes': output[0]['boxes'].cpu().detach().numpy().tolist(),
             'labels': output[0]['labels'].cpu().detach().numpy().tolist(),
             'scores': output[0]['scores'].cpu().detach().numpy().tolist()}
+    del input_tensor
+    del output
     return jsonify(data)
 
 
